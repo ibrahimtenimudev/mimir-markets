@@ -1,6 +1,6 @@
 # Mimir Contract Errors Reference
 
-This document provides a comprehensive reference of all error codes returned by the Mimir Soroban smart contracts (`mimir-market` and `mimir-squad`).
+This document provides a comprehensive reference of all error codes returned by the Mimir Soroban smart contracts (`mimir-market` and `mimir-squad`). Stale approved fee-policy changes are rejected with the typed `StaleFeePolicyRevision` error (`mimir-market`), preserving the active policy and all balances.
 
 ## Overview
 
@@ -66,6 +66,7 @@ Client SDKs and UI applications can map these numeric error codes or their varia
 | 45 | `ParentClaimAlreadyRematched` | `mimir-market` | `create_claim` | A rematch claim has already been linked to this parent claim ID. | A parent claim can only have one rematch child; create an independent new claim instead. |
 | 46 | `BatchTooLarge` | `mimir-market` | `get_claims_batch` | Batch query requested more than `MAX_BATCH_SIZE` (50) claim IDs in a single call. | Chunk batch requests into batches of 50 IDs or fewer. |
 | 47 | `ConservationViolation` | `mimir-market` | `create_claim`, `challenge_claim`, `resolve_claim`, `resolve_claim_versioned`, `cancel_claim`, `claim_challenger_payout` | State transition violated an accounting invariant (negative balances or liability > stake). | Invariant protection triggered to safeguard funds; audit state and report issue. |
+| 48 | `StaleFeePolicyRevision` | `mimir-market` | `execute_fee_policy` | The approved fee-policy change was queued against a policy revision that is no longer the active revision, so it is stale and was rejected. The active policy and all balances are unchanged. | Re-queue the fee policy change with `queue_fee_policy` against the current revision and wait for the timelock to elapse again. |
 | 1 | `AlreadyInitialized` | `mimir-squad` | `initialize` | Squad pool was already initialized. | No action needed; initialization is one-time only. |
 | 2 | `NotInitialized` | `mimir-squad` | `deposit`, `withdraw_before_deadline`, `claim`, `claim_parked_payout`, `claim_fees`, `queue_oracle`, `execute_oracle`, `get_usdc`, `get_oracle`, `get_fee_recipient`, `get_escrow_balance` | Squad pool entry point called before `initialize`. | Call `initialize` with required USDC token, oracle, and fee recipient addresses before interacting. |
 | 3 | `ZeroAddress` | `mimir-squad` | `initialize`, `create_market` | Address argument was null or zero address. | Provide a valid, non-zero Stellar contract or account address. |
@@ -98,3 +99,5 @@ Client SDKs and UI applications can map these numeric error codes or their varia
 | 30 | `AlreadyResolved` | `mimir-squad` | `cancel_market` | Attempted to cancel a market that has already been resolved or cancelled. | Resolved markets cannot be cancelled; participants can withdraw funds via `claim`. |
 | 31 | `NothingQueued` | `mimir-squad` | `cancel_oracle`, `execute_oracle` | Attempted to cancel or execute an oracle rotation when none was queued. | Queue an oracle change using `queue_oracle` before attempting to cancel or execute. |
 | 32 | `Timelocked` | `mimir-squad` | `execute_oracle` | Oracle timelock period (2 days) has not elapsed since queuing. | Wait until the 2-day timelock has elapsed after `queue_oracle` before calling `execute_oracle`. |
+
+| 48 | `StaleClaimRevision` | `mimir-market` | `challenge_claim`, `resolve_claim`, `resolve_claim_versioned`, `cancel_claim`, `transition_deadline` | Mutation was reviewed against an obsolete claim revision: the caller's expected claim revision no longer matches the current on-chain claim state. No claim or transferred amounts are modified. | Re-read `get_claim(claim_id)` to obtain the current revision and state, re-review the claim, then resubmit the mutation with the updated expected revision. |
